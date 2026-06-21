@@ -3,7 +3,7 @@ type RemoteMcpConfig = {
   readonly url: string
   readonly enabled: boolean
   readonly headers?: Record<string, string>
-  readonly oauth: false
+  // oauth intentionally omitted (NOT false) to enable OpenCode's OAuth flow for higher rate limits.
 }
 
 export function createContext7Config(env: Record<string, string | undefined> = process.env): RemoteMcpConfig {
@@ -14,7 +14,6 @@ export function createContext7Config(env: Record<string, string | undefined> = p
     url: "https://mcp.context7.com/mcp",
     enabled: true,
     ...(context7ApiKey ? { headers: { Authorization: `Bearer ${context7ApiKey}` } } : {}),
-    oauth: false as const,
   }
 }
 
