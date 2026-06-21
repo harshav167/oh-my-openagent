@@ -63,7 +63,7 @@ describe("createWebsearchConfig Exa handling", () => {
 
     expect(config).toEqual({
       type: "remote",
-      url: "https://mcp.exa.ai/mcp?tools=web_search_exa",
+      url: "https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa,web_search_advanced_exa",
       enabled: true,
       headers: {
         Authorization: "Bearer exa-secret",
@@ -81,7 +81,7 @@ describe("createWebsearchConfig Exa handling", () => {
 
     expect(config).toEqual({
       type: "remote",
-      url: "https://mcp.exa.ai/mcp?tools=web_search_exa",
+      url: "https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa,web_search_advanced_exa",
       enabled: true,
       oauth: false,
     })
