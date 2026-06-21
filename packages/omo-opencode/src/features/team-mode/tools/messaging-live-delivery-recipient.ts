@@ -14,6 +14,17 @@ import { markLiveDeliveryPending } from "./messaging-live-delivery-state"
 type RuntimeMember = RuntimeState["members"][number]
 type LiveDeliveryEnvelope = ReturnType<typeof buildEnvelope>
 
+// A live-delivery wake is skipped only when THIS message already has a delivery
+// in flight for the recipient — NOT when any unrelated message is pending. The
+// old "any pending id" guard permanently blocked new messages (e.g. a broadcast
+// to already-idle members) whenever a stale pending id lingered from a prior
+// round, so idle members never woke (issues #8 / #5). The prompt-async gate
+// still dedups concurrent dispatches to the same session, so a genuinely
+// in-flight wake for the same message is not double-fired.
+export function hasPendingDeliveryForMessage(recipientMember: RuntimeMember, messageId: string): boolean {
+  return recipientMember.pendingInjectedMessageIds.includes(messageId)
+}
+
 export async function deliverLiveToRecipient(input: {
   client: LiveDeliveryClient
   message: Message
@@ -37,7 +48,7 @@ export async function deliverLiveToRecipient(input: {
     directory,
   } = input
 
-  if (recipientMember.pendingInjectedMessageIds.length > 0) {
+  if (hasPendingDeliveryForMessage(recipientMember, message.messageId)) {
     await releaseReservationSafely(reservation, {
       teamRunId,
       recipient: recipientName,
