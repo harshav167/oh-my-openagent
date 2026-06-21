@@ -49,28 +49,31 @@ export async function getAvailableModelsForDelegateTask(client: OpencodeClient):
 
   const connectedProviders = connectedProvidersCache.readConnectedProvidersCache()
 
-  if (!connectedProviders || connectedProviders.length === 0) {
-    return new Set()
-  }
+  // Cold cache: on a fresh session the provider-models cache file is not written
+  // yet, so the connected-providers cache is often empty. Returning an empty set
+  // here is what made list_models report "no connected models" and forced the
+  // override gate into cold-cache passthrough. Instead, fetch the live model list
+  // directly to warm discovery on the first call. When the connected-providers
+  // cache IS known we still filter to it; otherwise we surface every model the
+  // client reports so a known-good slug resolves immediately.
+  if (hasModelList(client)) {
+    try {
+      const result = await client.model.list()
+      const rows = extractModelRows(result)
 
-  if (!hasModelList(client)) {
-    return new Set()
-  }
-
-  try {
-    const result = await client.model.list()
-    const rows = extractModelRows(result)
-
-    const connected = new Set(connectedProviders)
-    const out = new Set<string>()
-    for (const row of rows) {
-      if (!connected.has(row.provider)) continue
-      out.add(`${row.provider}/${row.id}`)
+      const connected = connectedProviders && connectedProviders.length > 0 ? new Set(connectedProviders) : undefined
+      const out = new Set<string>()
+      for (const row of rows) {
+        if (connected && !connected.has(row.provider)) continue
+        out.add(`${row.provider}/${row.id}`)
+      }
+      return out
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      log("[delegate-task] client.model.list failed", { error: errorMessage })
+      return new Set()
     }
-    return out
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err)
-    log("[delegate-task] client.model.list failed", { error: errorMessage })
-    return new Set()
   }
+
+  return new Set()
 }
